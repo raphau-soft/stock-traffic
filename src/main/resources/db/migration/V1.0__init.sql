@@ -13,9 +13,9 @@ CREATE TABLE IF NOT EXISTS `test`(
     `name` varchar(45) NOT NULL,
     `number_of_requests` int(11) NOT NULL,
     `number_of_users` int(11) NOT NULL,
-    `database_time` float(45) NOT NULL,
-    `api_time` float(45) NOT NULL,
-    `application_time` float(45) NOT NULL,
+    `database_time` bigint(45) NOT NULL,
+    `api_time` bigint(45) NOT NULL,
+    `application_time` bigint(45) NOT NULL,
     PRIMARY KEY(`id`),
     FOREIGN KEY(`endpoint_id`) REFERENCES `endpoint`(`id`)
 );

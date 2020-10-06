@@ -1,0 +1,15 @@
+INSERT INTO endpoint VALUES(1, 'buyOffer', 'post');
+INSERT INTO endpoint VALUES(2, 'companies', 'get');
+INSERT INTO endpoint VALUES(3, 'company', 'post');
+INSERT INTO endpoint VALUES(4, 'sellOffer', 'post');
+INSERT INTO endpoint VALUES(5, 'stockRates', 'get');
+INSERT INTO endpoint VALUES(6, 'transactions', 'get');
+INSERT INTO endpoint VALUES(7, 'user', 'get');
+INSERT INTO endpoint VALUES(8, 'user/buyOffers', 'get');
+INSERT INTO endpoint VALUES(9, 'user/resources', 'get');
+INSERT INTO endpoint VALUES(10, 'user/sellOffers', 'get');
+INSERT INTO endpoint VALUES(11, 'user/sellOffers/id', 'delete');
+INSERT INTO endpoint VALUES(12, 'user/buyOffers/id', 'delete');
+INSERT INTO endpoint VALUES(13, 'user/login', 'put');
+INSERT INTO endpoint VALUES(14, 'signin', 'post');
+INSERT INTO endpoint VALUES(15, 'signup', 'post');

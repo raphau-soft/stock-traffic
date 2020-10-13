@@ -1,13 +1,9 @@
 package com.raphau.trafficgenerator.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.raphau.trafficgenerator.dao.EndpointRepository;
 import com.raphau.trafficgenerator.dto.*;
-import com.raphau.trafficgenerator.entity.Endpoint;
-import com.raphau.trafficgenerator.entity.Test;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.LoggerFactory;
@@ -20,11 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.lang.reflect.Type;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 
 @Service
@@ -32,21 +24,7 @@ public class AsyncService {
 
     private static Logger log = LoggerFactory.getLogger(AsyncService.class);
     private HttpHeaders headers;
-    // playing on stock
-    private double STOCK_PLAY = 0;
-    private double CREATE_A_COMPANY = 0.02;
-    private double CREATE_A_BUY_OFFER = 0.44;
-    private double CREATE_A_SELL_OFFER = 0.44;
-    private double DELETE_A_SELL_OFFER = 0.05;
-    private double DELETE_A_BUY_OFFER = 0.05;
-    private double CONTINUE_STOCK_PLAY = 0.85;
-    private double LOGOUT = 0.15;
-    // checking data
-    private double DATA_CHECK = 1;
-    private double CHECK_BUY_OFFERS = 0;
-    private double CHECK_SELL_OFFERS = 1;
-    private double CHECK_USER_DATA = 0;
-    private double CONTINUE_DATA_CHECK = 0.85;
+
     // playing on stock strategy
     private final int RAND_EXPENSIVE_ONE_COMP = 0;
     private final int RAND_RANDOM_MANY_COMP = 1;
@@ -57,7 +35,7 @@ public class AsyncService {
     private final String COMPANIES = "companies";
     private final String COMPANY = "company";
     private final String SELLOFFER = "sellOffer";
-    // private final String STOCKRATES = "stockRates";
+    private final String STOCKRATES = "stockRates";
     // private final String TRANSACTIONS = "transactions";
     private final String USER_RESOURCES = "user/resources";
     private final String USER = "user";
@@ -66,13 +44,9 @@ public class AsyncService {
     private final String USER_SELLOFFERS = "user/sellOffers";
     private final String USER_SELLOFFERS_D = "user/sellOffers/ID";
     // private final String USER_LOGIN = "user/login";
-    private static int strategy = 1;
 
     @Autowired
     private RestTemplate restTemplate;
-
-    @Autowired
-    private EndpointRepository endpointRepository;
 
     @Bean
     public RestTemplate restTemplate(){
@@ -80,76 +54,65 @@ public class AsyncService {
     }
 
     @Async("asyncExecutor")
-    public void runTests(String username, List<ClientTestDTO> clientTestDTOList) throws JSONException, JsonProcessingException, InterruptedException {
+    public void runTests(String username, List<ClientTestDTO> clientTestDTOList, RunTestDTO runTestDTO) throws JSONException, JsonProcessingException, InterruptedException {
         // try to register users
         postRegistration(username);
         // try to login users
         UserLogin userLogin = login(username);
         log.info("Logged in ----> " + userLogin.getUsername());
         ClientTestDTO clientTestDTO = new ClientTestDTO();
-        TestDetailsDTO testDetailsDTO;
         double random = Math.random();
-        if (random <= STOCK_PLAY) {
+        if (random <= runTestDTO.getStockPlay()) {
             for(;;) {
-                log.info("GRANIE NA GIELDZIE " + username);
+                log.info("Playing on stock - " + username);
                 random = Math.random();
-                if (random <= CREATE_A_COMPANY) {
-                    log.info("TWORZENIE FIRMY " + username);
-                    testDetailsDTO = createCompany(userLogin.getJwt());
-                    clientTestDTO.addTestDetails(COMPANY, testDetailsDTO);
-                } else if (random > CREATE_A_COMPANY && random <= CREATE_A_SELL_OFFER + CREATE_A_COMPANY) {
-                    log.info("TWORZENIE OFERTY SPRZEDAZY " + username);
-                    strategyAddSellOffer(userLogin.getJwt(), strategy, clientTestDTO);
-                } else if (random > CREATE_A_SELL_OFFER + CREATE_A_COMPANY && random <= CREATE_A_BUY_OFFER + CREATE_A_COMPANY + CREATE_A_SELL_OFFER) {
-                    log.info("TWORZENIE OFERTY KUPNA " + username);
-                    strategyAddBuyOffer(userLogin.getJwt(), strategy, clientTestDTO);
-                } else if (random > CREATE_A_BUY_OFFER + CREATE_A_COMPANY + CREATE_A_SELL_OFFER && random <= CREATE_A_BUY_OFFER + CREATE_A_COMPANY + CREATE_A_SELL_OFFER + DELETE_A_SELL_OFFER) {
+                if (random <= runTestDTO.getCreateCompany()) {
+                    log.info("Create a company - " + username);
+                    createCompany(userLogin.getJwt(), clientTestDTO);
+                } else if (random > runTestDTO.getCreateCompany() && random <= runTestDTO.getCreateSellOffer() + runTestDTO.getCreateCompany()) {
+                    log.info("Create a sell offer - " + username);
+                    strategyAddSellOffer(userLogin.getJwt(), runTestDTO.getStrategy(), clientTestDTO);
+                } else if (random > runTestDTO.getCreateSellOffer() + runTestDTO.getCreateCompany() && random <= runTestDTO.getCreateBuyOffer() + runTestDTO.getCreateCompany() + runTestDTO.getCreateSellOffer()) {
+                    log.info("Create a buy offer - " + username);
+                    strategyAddBuyOffer(userLogin.getJwt(), runTestDTO.getStrategy(), clientTestDTO);
+                } else if (random > runTestDTO.getCreateBuyOffer() + runTestDTO.getCreateCompany() + runTestDTO.getCreateSellOffer() && random <= runTestDTO.getCreateBuyOffer() + runTestDTO.getCreateCompany() + runTestDTO.getCreateSellOffer() + runTestDTO.getDeleteSellOffer()) {
                     log.info("USUNIECIE OFERTY SPRZEDAZY " + username);
                 } else {
                     log.info("USUNIECIE OFERTY KUPNA " + username);
                 }
                 random = Math.random();
-                if(random <= LOGOUT){
+                if(random <= runTestDTO.getLogout()){
                     log.info("LOGOUT  " + username);
                     break;
                 }
             }
         } else {
-            Gson gson = new Gson();
-            JSONObject jsonObject;
             for(;;) {
                 log.info("SPRAWDZANIE DANYCH " + username);
                 random = Math.random();
-                if(random <= CHECK_BUY_OFFERS){
+                if(random <= runTestDTO.getDataCheck()){
                     log.info("SPRAWDZANIE OFERT KUPNA " + username);
-                    jsonObject = new JSONObject(getBuyOffers(userLogin.getJwt()));
-                    testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
-                    clientTestDTO.addTestDetails(USER_BUYOFFERS, testDetailsDTO);
-                } else if(random > CHECK_BUY_OFFERS && random <= CHECK_BUY_OFFERS + CHECK_SELL_OFFERS){
+                    getBuyOffers(userLogin.getJwt(), clientTestDTO);
+                } else if(random > runTestDTO.getCheckBuyOffers() && random <= runTestDTO.getCheckBuyOffers() + runTestDTO.getCheckSellOffers()){
                     log.info("SPRAWDZANIE OFERT SPRZEDAZY " + username);
-                    jsonObject = new JSONObject(getSellOffers(userLogin.getJwt()));
-                    testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
-                    clientTestDTO.addTestDetails(USER_SELLOFFERS, testDetailsDTO);
+                    getSellOffers(userLogin.getJwt(), clientTestDTO);
                 } else {
                     log.info("SPRAWDZANIE SWOICH DANYCH " + username);
-                    jsonObject = new JSONObject(getUser(userLogin.getJwt()));
-                    testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
-                    clientTestDTO.addTestDetails(USER, testDetailsDTO);
+                    getUser(userLogin.getJwt(), clientTestDTO);
                 }
                 random = Math.random();
-                if(random <= LOGOUT){
+                if(random <= runTestDTO.getLogout()){
                     log.info("LOGOUT  " + username);
                     break;
                 }
             }
         }
         clientTestDTOList.add(clientTestDTO);
-        log.info("Client list size: " + clientTestDTOList.size());
     }
 
 
 
-    private void postRegistration(String username) throws InterruptedException, JSONException {
+    private void postRegistration(String username) throws JSONException {
         log.info("Registration " + username + " starts");
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -191,94 +154,130 @@ public class AsyncService {
         return userLogin;
     }
 
-    private String getUser(String jwt) throws JSONException, JsonProcessingException {
+    private String getUser(String jwt, ClientTestDTO clientTestDTO) throws JSONException {
+        Gson gson = new Gson();
+        JSONObject jsonObject;
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + jwt);
         HttpEntity entity = new HttpEntity(headers);
 
         ResponseEntity jsonResponse = null;
+        long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
                     "http://172.20.0.2:8080/api/user", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
+        apiTime = System.currentTimeMillis() - apiTime;
         assert jsonResponse != null;
+        jsonObject = new JSONObject((String) jsonResponse.getBody());
+        TestDetailsDTO testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
+        clientTestDTO.addTestDetails(USER, testDetailsDTO, apiTime);
         return (String) jsonResponse.getBody();
     }
 
-    private String getBuyOffers(String jwt) {
+    private String getBuyOffers(String jwt, ClientTestDTO clientTestDTO) throws JSONException {
+        Gson gson = new Gson();
+        JSONObject jsonObject;
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + jwt);
         HttpEntity entity = new HttpEntity(headers);
 
         ResponseEntity jsonResponse = null;
+        long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
                     "http://172.20.0.2:8080/api/user/buyOffers", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
+        apiTime = System.currentTimeMillis() - apiTime;
         assert jsonResponse != null;
+        jsonObject = new JSONObject((String) jsonResponse.getBody());
+        TestDetailsDTO testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
+        clientTestDTO.addTestDetails(USER_BUYOFFERS, testDetailsDTO, apiTime);
         return (String) jsonResponse.getBody();
     }
 
-    private String getSellOffers(String jwt) {
+    private String getSellOffers(String jwt, ClientTestDTO clientTestDTO) throws JSONException {
+        Gson gson = new Gson();
+        JSONObject jsonObject;
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + jwt);
         HttpEntity entity = new HttpEntity(headers);
 
         ResponseEntity jsonResponse = null;
+        long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
                     "http://172.20.0.2:8080/api/user/sellOffers", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
+        apiTime = System.currentTimeMillis() - apiTime;
         assert jsonResponse != null;
+        jsonObject = new JSONObject((String) jsonResponse.getBody());
+        TestDetailsDTO testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
+        clientTestDTO.addTestDetails(USER_SELLOFFERS, testDetailsDTO, apiTime);
         return (String) jsonResponse.getBody();
     }
 
-    private String getResources(String jwt) {
+    private String getResources(String jwt, ClientTestDTO clientTestDTO) throws JSONException {
+        Gson gson = new Gson();
+        JSONObject jsonObject;
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + jwt);
         HttpEntity entity = new HttpEntity(headers);
 
         ResponseEntity jsonResponse = null;
+        long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
                     "http://172.20.0.2:8080/api/user/resources", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
+        apiTime = System.currentTimeMillis() - apiTime;
         String response = null;
-        if(jsonResponse != null)
+        if(jsonResponse != null) {
             response = (String) jsonResponse.getBody();
+            jsonObject = new JSONObject(response);
+            TestDetailsDTO testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
+            clientTestDTO.addTestDetails(USER_RESOURCES, testDetailsDTO, apiTime);
+        }
         return response;
     }
 
-    private String getStockRates(String jwt){
+    private String getStockRates(String jwt, ClientTestDTO clientTestDTO) throws JSONException {
+        Gson gson = new Gson();
+        JSONObject jsonObject;
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + jwt);
         HttpEntity entity = new HttpEntity(headers);
 
         ResponseEntity jsonResponse = null;
+        long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
                     "http://172.20.0.2:8080/stockRates", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
+        apiTime = System.currentTimeMillis() - apiTime;
         assert jsonResponse != null;
+        jsonObject = new JSONObject((String) jsonResponse.getBody());
+        TestDetailsDTO testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
+        clientTestDTO.addTestDetails(STOCKRATES, testDetailsDTO, apiTime);
         return (String) jsonResponse.getBody();
     }
 
-    private TestDetailsDTO createCompany(String jwt) throws JSONException {
+    private void createCompany(String jwt, ClientTestDTO clientTestDTO) throws JSONException {
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + jwt);
@@ -305,43 +304,47 @@ public class AsyncService {
         HttpEntity<String> request = new HttpEntity<>(companyJsonObject.toString(), headers);
 
         TestDetailsDTO testDetailsDTO = null;
+        long apiTime = System.currentTimeMillis();
         try {
             testDetailsDTO = restTemplate.postForObject("http://172.20.0.2:8080/company", request, TestDetailsDTO.class);
         } catch (Exception e){
             log.info("Error " + e);
         }
+        apiTime = System.currentTimeMillis() - apiTime;
         assert testDetailsDTO != null;
         log.info(testDetailsDTO.toString());
-        return testDetailsDTO;
+        clientTestDTO.addTestDetails(COMPANY, testDetailsDTO, apiTime);
     }
 
-    private String getCompanies(String jwt){
+    private String getCompanies(String jwt, ClientTestDTO clientTestDTO) throws JSONException {
+        Gson gson = new Gson();
+        JSONObject jsonObject;
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + jwt);
         HttpEntity entity = new HttpEntity(headers);
 
         ResponseEntity jsonResponse = null;
+        long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
                     "http://172.20.0.2:8080/companies", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
+        apiTime = System.currentTimeMillis() - apiTime;
         assert jsonResponse != null;
+        jsonObject = new JSONObject((String) jsonResponse.getBody());
+        TestDetailsDTO testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
+        clientTestDTO.addTestDetails(COMPANIES, testDetailsDTO, apiTime);
         return (String) jsonResponse.getBody();
     }
 
     private void strategyAddBuyOffer(String jwt, int strategy, ClientTestDTO clientTestDTO) throws JSONException, JsonProcessingException {
-        TestDetailsDTO testDetailsDTO;
         Gson gson = new Gson();
-        JSONObject jsonObject = new JSONObject(getUser(jwt));
+        JSONObject jsonObject = new JSONObject(getUser(jwt, clientTestDTO));
         User user = gson.fromJson(jsonObject.get("user").toString(), User.class);
-        testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
-        clientTestDTO.addTestDetails(USER, testDetailsDTO);
-        jsonObject = new JSONObject(getCompanies(jwt));
-        testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
-        clientTestDTO.addTestDetails(COMPANIES, testDetailsDTO);
+        jsonObject = new JSONObject(getCompanies(jwt, clientTestDTO));
         Type companyListType = new TypeToken<ArrayList<Company>>(){}.getType();
         List<Company> companies = gson.fromJson(jsonObject.get("company").toString(), companyListType);
         double price;
@@ -356,13 +359,11 @@ public class AsyncService {
                 price = Math.round(price)/100.0;
                 amount = (int) Math.round(Math.random() * 100.f % (user.getMoney() / price / 2));
                 int companyId = companies.get((int) Math.round(Math.random() * 100.f % (companies.size() - 1))).getId();
-                testDetailsDTO = createBuyOffer(jwt, companyId, amount, price);
-                if(testDetailsDTO != null)
-                    clientTestDTO.addTestDetails(BUYOFFER, testDetailsDTO);
+                createBuyOffer(jwt, companyId, amount, price, clientTestDTO);
                 break;
             case RAND_RANDOM_MANY_COMP:
                 // buying stocks of many companies
-                jsonObject = new JSONObject(getStockRates(jwt));
+                jsonObject = new JSONObject(getStockRates(jwt, clientTestDTO));
                 Type stockRateListType = new TypeToken<ArrayList<StockRate>>(){}.getType();
                 List<StockRate> stockRates = gson.fromJson(jsonObject.get("stockRate").toString(), stockRateListType);
                 int amountOfCompanies = Math.abs(new Random().nextInt() % (stockRates.size() / 3)) + 1;
@@ -375,11 +376,7 @@ public class AsyncService {
                     price = Math.round((Math.abs(new Random().nextDouble()) % (rate * 0.3) + rate * 0.9) * 100) / 100.f;
                     amount = (int) Math.round(Math.random() * 100.f % (user.getMoney() / price / 10));
                     log.info("Price: " + price + " Money: " + user.getMoney() + "Amount: " + amount);
-                    testDetailsDTO = createBuyOffer(jwt, company.getId(), amount, price);
-                    if(testDetailsDTO != null) {
-                        clientTestDTO.addTestDetails(BUYOFFER, testDetailsDTO);
-                        log.info("Database time: " + testDetailsDTO.getDatabaseTime());
-                    }
+                    createBuyOffer(jwt, company.getId(), amount, price, clientTestDTO);
                     stockRates.remove(companyNum);
                 }
                 break;
@@ -387,18 +384,14 @@ public class AsyncService {
     }
 
     private void strategyAddSellOffer(String jwt, int strategy, ClientTestDTO clientTestDTO) throws JSONException, JsonProcessingException {
-        TestDetailsDTO testDetailsDTO;
         Gson gson = new Gson();
-        JSONObject jsonObject = new JSONObject(getUser(jwt));
+        JSONObject jsonObject = new JSONObject(getUser(jwt, clientTestDTO));
         User user = gson.fromJson(jsonObject.get("user").toString(), User.class);
-        testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
-        clientTestDTO.addTestDetails(USER, testDetailsDTO);
         //log.info("@@@@@@@ RESOURCES: " + getResources(jwt));
-        String resources = getResources(jwt);
+        String resources = getResources(jwt, clientTestDTO);
+        if(resources == null) return;
         jsonObject = new JSONObject(resources);
         log.info("Resources: " + resources);
-        testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
-        clientTestDTO.addTestDetails(USER_RESOURCES, testDetailsDTO);
         Type stockListType = new TypeToken<ArrayList<Stock>>(){}.getType();
         List<Stock> stocks = gson.fromJson(jsonObject.get("stock").toString(), stockListType);
         if(stocks.size() <= 0) return;
@@ -416,13 +409,11 @@ public class AsyncService {
                 int amount = (int) Math.round(Math.random() * 100.f % (stocks.get(stockNum).getAmount())) + 1;
                 log.info("Cena: " + price + " Ilość:" + amount + " Faktyczna ilość: " + stocks.get(stockNum).getAmount());
                 int companyId = stocks.get(stockNum).getCompany().getId();
-                testDetailsDTO = createSellOffer(jwt, companyId, amount, price);
-                if(testDetailsDTO != null)
-                    clientTestDTO.addTestDetails(SELLOFFER, testDetailsDTO);
+                createSellOffer(jwt, companyId, amount, price, clientTestDTO);
                 break;
             case RAND_RANDOM_MANY_COMP:
                 // sell stocks of many companies
-                jsonObject = new JSONObject(getStockRates(jwt));
+                jsonObject = new JSONObject(getStockRates(jwt, clientTestDTO));
                 Type stockRateListType = new TypeToken<ArrayList<StockRate>>(){}.getType();
                 List<StockRate> stockRates = gson.fromJson(jsonObject.get("stockRate").toString(), stockRateListType);
                 int amountOfStocks = Math.abs(new Random().nextInt() % stocks.size())/3 + 1;
@@ -440,16 +431,14 @@ public class AsyncService {
                     // price from 80% to 110% of rate (I think so)
                     price = Math.round((Math.abs(new Random().nextDouble()) % (rate * 0.3) + rate * 0.8)*100)/100.f;
                     amount = (int) Math.round(Math.random() * 100.f % (user.getMoney() / price / 10));
-                    testDetailsDTO = createSellOffer(jwt, company.getId(), amount, price);
-                    if(testDetailsDTO != null)
-                        clientTestDTO.addTestDetails(SELLOFFER, testDetailsDTO);
+                    createSellOffer(jwt, company.getId(), amount, price, clientTestDTO);
                     stocks.remove(stockNum);
                 }
                 break;
         }
     }
 
-    private TestDetailsDTO createBuyOffer(String jwt, int companyId, int amount, double price) throws JSONException {
+    private void createBuyOffer(String jwt, int companyId, int amount, double price, ClientTestDTO clientTestDTO) throws JSONException {
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + jwt);
@@ -463,15 +452,18 @@ public class AsyncService {
         HttpEntity<String> request = new HttpEntity<>(companyJsonObject.toString(), headers);
         log.info("CREATING A BUY OFFER");
         TestDetailsDTO testDetailsDTO = null;
+        long apiTime = System.currentTimeMillis();
         try {
             testDetailsDTO = restTemplate.postForObject("http://172.20.0.2:8080/api/buyOffer", request, TestDetailsDTO.class);
         } catch (Exception e){
             log.info("Error " + e);
         }
-        return testDetailsDTO;
+        apiTime = System.currentTimeMillis() - apiTime;
+        if(testDetailsDTO !=null)
+            clientTestDTO.addTestDetails(BUYOFFER, testDetailsDTO, apiTime);
     }
 
-    private TestDetailsDTO createSellOffer(String jwt, int companyId, int amount, double price) throws JSONException {
+    private void createSellOffer(String jwt, int companyId, int amount, double price, ClientTestDTO clientTestDTO) throws JSONException {
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + jwt);
@@ -485,12 +477,15 @@ public class AsyncService {
         HttpEntity<String> request = new HttpEntity<>(companyJsonObject.toString(), headers);
         log.info("CREATING A BUY OFFER");
         TestDetailsDTO testDetailsDTO = null;
+        long apiTime = System.currentTimeMillis();
         try {
             testDetailsDTO = restTemplate.postForObject("http://172.20.0.2:8080/api/sellOffer", request, TestDetailsDTO.class);
         } catch (Exception e){
             log.info("Error " + e);
         }
-        return testDetailsDTO;
+        apiTime = System.currentTimeMillis() - apiTime;
+        if(testDetailsDTO != null)
+            clientTestDTO.addTestDetails(BUYOFFER, testDetailsDTO, apiTime);
     }
 }
 

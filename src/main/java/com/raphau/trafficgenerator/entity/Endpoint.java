@@ -3,11 +3,12 @@ package com.raphau.trafficgenerator.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.util.List;
 
 @Entity
 @Table(name="endpoint")
-public class Endpoint {
+public class Endpoint implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,11 +28,10 @@ public class Endpoint {
     public Endpoint() {
     }
 
-    public Endpoint(int id, String endpoint, String method, List<Test> tests) {
+    public Endpoint(int id, String endpoint, String method) {
         this.id = id;
         this.endpoint = endpoint;
         this.method = method;
-        this.tests = tests;
     }
 
     public int getId() {
@@ -64,7 +64,14 @@ public class Endpoint {
                 "id=" + id +
                 ", endpoint='" + endpoint + '\'' +
                 ", method='" + method + '\'' +
-                ", tests=" + tests +
                 '}';
+    }
+
+    public List<Test> getTests() {
+        return tests;
+    }
+
+    public void setTests(List<Test> tests) {
+        this.tests = tests;
     }
 }

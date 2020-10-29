@@ -26,8 +26,8 @@ public class TestController {
     private static Logger log = LoggerFactory.getLogger(TestController.class);
     private String testName;
     private String username = "user1";
-    private List<ClientTestDTO> clientTestDTOList;
     private int numberOfUsers = 10;
+    private RunTestDTO runTestDTO = new RunTestDTO(20, 50, 0.9, 0.02, 0.44, 0.44, 0.05, 0.05, 0.9, 0.1, 0.1, 0.33, 0.33, 0.34, 0.9, 1);
     Map<String, Integer> numberOfRequests = new HashMap<>();
     Map<String, Long> databaseTime = new HashMap<>();
     Map<String, Long> applicationTime = new HashMap<>();
@@ -44,12 +44,17 @@ public class TestController {
 
     @PostMapping("/runTest")
     @CrossOrigin(value = "*", maxAge = 3600)
-    public void asyncTest(@RequestBody RunTestDTO runTestDTO) throws InterruptedException,  JSONException, JsonProcessingException {
+    public void asyncTest(@RequestBody String name) throws Exception {
 
         log.info("testAsync start");
-        testName = "test full sell offers id 10";
+        testName = name;
+
+        if(testRepository.findAllByName(testName).length != 0){
+            throw new Exception();
+        }
+
         // RunTests
-        clientTestDTOList = new ArrayList<>();
+        List<ClientTestDTO> clientTestDTOList = new ArrayList<>();
         for(int i = 0; i < runTestDTO.getNumberOfUsers(); i++){
             log.info("Register " + username + i);
             asyncService.runTests(username + i, clientTestDTOList, runTestDTO);
@@ -93,6 +98,20 @@ public class TestController {
         }
         Map<String, Object> temp = new HashMap<>();
         temp.put("tests", tests);
+        return ResponseEntity.ok(temp);
+    }
+
+    @PostMapping("/setConf")
+    @CrossOrigin(value = "*", maxAge = 3600)
+    public void setConf(@RequestBody RunTestDTO runTestDTO){
+        this.runTestDTO = runTestDTO;
+    }
+
+    @GetMapping("/getConf")
+    @CrossOrigin(value = "*", maxAge = 3600)
+    public ResponseEntity<?> getConf(){
+        Map<String, Object> temp = new HashMap<>();
+        temp.put("conf", this.runTestDTO);
         return ResponseEntity.ok(temp);
     }
 

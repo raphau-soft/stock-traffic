@@ -43,6 +43,7 @@ public class AsyncService {
     private final String USER_BUYOFFERS_D = "user/buyOffers/id";
     private final String USER_SELLOFFERS = "user/sellOffers";
     private final String USER_SELLOFFERS_D = "user/sellOffers/ID";
+    private final String api = "http://172.20.0.2:8080/";
     // private final String USER_LOGIN = "user/login";
 
     @Autowired
@@ -127,7 +128,7 @@ public class AsyncService {
         HttpEntity<String> request = new HttpEntity<>(personJsonObject.toString(), headers);
         String message = "";
         try {
-            message = restTemplate.postForObject("http://172.20.0.2:8080/api/auth/signup", request, String.class);
+            message = restTemplate.postForObject(this.api + "api/auth/signup", request, String.class);
             log.info(message);
             log.info("Registration " + username + " ends");
         } catch (Exception e){
@@ -146,7 +147,7 @@ public class AsyncService {
         HttpEntity<String> request = new HttpEntity<>(personJsonObject.toString(), headers);
         UserLogin userLogin = null;
         try {
-            userLogin = restTemplate.postForObject("http://172.20.0.2:8080/api/auth/signin", request, UserLogin.class);
+            userLogin = restTemplate.postForObject(this.api + "api/auth/signin", request, UserLogin.class);
             log.info("Login " + username + " ends");
         } catch (Exception e){
             log.info("Error login " + username);
@@ -166,7 +167,7 @@ public class AsyncService {
         long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
-                    "http://172.20.0.2:8080/api/user", HttpMethod.GET, entity, String.class, new Object());
+                    this.api + "api/user", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
@@ -190,7 +191,7 @@ public class AsyncService {
         long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
-                    "http://172.20.0.2:8080/api/user/buyOffers", HttpMethod.GET, entity, String.class, new Object());
+                    this.api + "api/user/buyOffers", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
@@ -214,7 +215,7 @@ public class AsyncService {
         long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
-                    "http://172.20.0.2:8080/api/user/sellOffers", HttpMethod.GET, entity, String.class, new Object());
+                    this.api + "api/user/sellOffers", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
@@ -238,7 +239,7 @@ public class AsyncService {
         long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
-                    "http://172.20.0.2:8080/api/user/resources", HttpMethod.GET, entity, String.class, new Object());
+                    this.api + "api/user/resources", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
@@ -265,7 +266,7 @@ public class AsyncService {
         long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
-                    "http://172.20.0.2:8080/stockRates", HttpMethod.GET, entity, String.class, new Object());
+                    this.api + "stockRates", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
@@ -306,7 +307,7 @@ public class AsyncService {
         TestDetailsDTO testDetailsDTO = null;
         long apiTime = System.currentTimeMillis();
         try {
-            testDetailsDTO = restTemplate.postForObject("http://172.20.0.2:8080/company", request, TestDetailsDTO.class);
+            testDetailsDTO = restTemplate.postForObject(this.api + "company", request, TestDetailsDTO.class);
         } catch (Exception e){
             log.info("Error " + e);
         }
@@ -328,7 +329,7 @@ public class AsyncService {
         long apiTime = System.currentTimeMillis();
         try {
             jsonResponse = restTemplate.exchange(
-                    "http://172.20.0.2:8080/companies", HttpMethod.GET, entity, String.class, new Object());
+                    this.api + "companies", HttpMethod.GET, entity, String.class, new Object());
         } catch (Exception e){
             log.info("Error " + e);
         }
@@ -454,7 +455,7 @@ public class AsyncService {
         TestDetailsDTO testDetailsDTO = null;
         long apiTime = System.currentTimeMillis();
         try {
-            testDetailsDTO = restTemplate.postForObject("http://172.20.0.2:8080/api/buyOffer", request, TestDetailsDTO.class);
+            testDetailsDTO = restTemplate.postForObject( this.api + "api/buyOffer", request, TestDetailsDTO.class);
         } catch (Exception e){
             log.info("Error " + e);
         }
@@ -475,17 +476,17 @@ public class AsyncService {
         companyJsonObject.put("amount", amount);
         companyJsonObject.put("dateLimit", "2014-05-09T00:48:16-04:00");
         HttpEntity<String> request = new HttpEntity<>(companyJsonObject.toString(), headers);
-        log.info("CREATING A BUY OFFER");
+        log.info("CREATING A SELL OFFER");
         TestDetailsDTO testDetailsDTO = null;
         long apiTime = System.currentTimeMillis();
         try {
-            testDetailsDTO = restTemplate.postForObject("http://172.20.0.2:8080/api/sellOffer", request, TestDetailsDTO.class);
+            testDetailsDTO = restTemplate.postForObject(this.api + "api/sellOffer", request, TestDetailsDTO.class);
         } catch (Exception e){
             log.info("Error " + e);
         }
         apiTime = System.currentTimeMillis() - apiTime;
         if(testDetailsDTO != null)
-            clientTestDTO.addTestDetails(BUYOFFER, testDetailsDTO, apiTime);
+            clientTestDTO.addTestDetails(SELLOFFER, testDetailsDTO, apiTime);
     }
 }
 

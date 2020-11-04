@@ -2,6 +2,7 @@ package com.raphau.trafficgenerator.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.raphau.trafficgenerator.dto.*;
 import org.json.JSONException;
@@ -78,9 +79,12 @@ public class AsyncService {
                     strategyAddBuyOffer(userLogin.getJwt(), runTestDTO.getStrategy(), clientTestDTO);
                 } else if (random > runTestDTO.getCreateBuyOffer() + runTestDTO.getCreateCompany() + runTestDTO.getCreateSellOffer() && random <= runTestDTO.getCreateBuyOffer() + runTestDTO.getCreateCompany() + runTestDTO.getCreateSellOffer() + runTestDTO.getDeleteSellOffer()) {
                     log.info("USUNIECIE OFERTY SPRZEDAZY " + username);
+                    deleteSellOffer(userLogin.getJwt(), clientTestDTO);
                 } else {
                     log.info("USUNIECIE OFERTY KUPNA " + username);
+                    deleteBuyOffer(userLogin.getJwt(), clientTestDTO);
                 }
+                Thread.sleep(runTestDTO.getTimeBetweenRequests());
                 random = Math.random();
                 if(random <= runTestDTO.getLogout()){
                     log.info("LOGOUT  " + username);
@@ -101,6 +105,7 @@ public class AsyncService {
                     log.info("SPRAWDZANIE SWOICH DANYCH " + username);
                     getUser(userLogin.getJwt(), clientTestDTO);
                 }
+                Thread.sleep(runTestDTO.getTimeBetweenRequests());
                 random = Math.random();
                 if(random <= runTestDTO.getLogout()){
                     log.info("LOGOUT  " + username);
@@ -109,9 +114,48 @@ public class AsyncService {
             }
         }
         clientTestDTOList.add(clientTestDTO);
+        log.info("" + clientTestDTOList.size());
     }
 
+    public void deleteSellOffer(String jwt, ClientTestDTO clientTestDTO) throws JSONException {
+        JSONObject jsonObject;
+        Gson gson = new Gson();
+        jsonObject = new JSONObject(getSellOffers(jwt, clientTestDTO));
+        Type sellOfferListType = new TypeToken<ArrayList<SellOffer>>(){}.getType();
+        List<SellOffer> sellOffers = gson.fromJson(jsonObject.get("sellOffers").toString(), sellOfferListType);
+        if(sellOffers.size() == 0) return;
+        headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + jwt);
+        HttpEntity entity = new HttpEntity(headers);
+        int i = Math.abs(new Random().nextInt()) % sellOffers.size();
+        long apiTime = System.currentTimeMillis();
+        restTemplate.exchange(
+                this.api + "api/user/sellOffers/" + sellOffers.get(i).getId(), HttpMethod.DELETE, entity, String.class, new Object());
+        apiTime = System.currentTimeMillis() - apiTime;
+        TestDetailsDTO testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
+        clientTestDTO.addTestDetails(USER_SELLOFFERS_D, testDetailsDTO, apiTime);
+    }
 
+    public void deleteBuyOffer(String jwt, ClientTestDTO clientTestDTO) throws JSONException {
+        JSONObject jsonObject;
+        Gson gson = new Gson();
+        jsonObject = new JSONObject(getBuyOffers(jwt, clientTestDTO));
+        Type buyOfferListType = new TypeToken<ArrayList<BuyOffer>>(){}.getType();
+        List<BuyOffer> buyOffers = gson.fromJson(jsonObject.get("buyOffers").toString(), buyOfferListType);
+        if(buyOffers.size() == 0) return;
+        headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + jwt);
+        HttpEntity entity = new HttpEntity(headers);
+        int i = Math.abs(new Random().nextInt()) % buyOffers.size();
+        long apiTime = System.currentTimeMillis();
+        restTemplate.exchange(
+                this.api + "api/user/buyOffers/" + buyOffers.get(i).getId(), HttpMethod.DELETE, entity, String.class, new Object());
+        apiTime = System.currentTimeMillis() - apiTime;
+        TestDetailsDTO testDetailsDTO = gson.fromJson(jsonObject.get("testDetails").toString(), TestDetailsDTO.class);
+        clientTestDTO.addTestDetails(USER_BUYOFFERS_D, testDetailsDTO, apiTime);
+    }
 
     private void postRegistration(String username) throws JSONException {
         log.info("Registration " + username + " starts");
@@ -136,7 +180,7 @@ public class AsyncService {
         }
     }
 
-    private UserLogin login(String username) throws JSONException {
+    public UserLogin login(String username) throws JSONException {
         log.info("Login " + username + " starts");
         headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

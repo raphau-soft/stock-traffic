@@ -5,6 +5,7 @@ import com.raphau.trafficgenerator.dao.EndpointRepository;
 import com.raphau.trafficgenerator.dao.TestRepository;
 import com.raphau.trafficgenerator.dto.ClientTestDTO;
 import com.raphau.trafficgenerator.dto.RunTestDTO;
+import com.raphau.trafficgenerator.dto.UserLogin;
 import com.raphau.trafficgenerator.entity.Endpoint;
 import com.raphau.trafficgenerator.entity.Test;
 import com.raphau.trafficgenerator.service.AsyncService;
@@ -21,12 +22,10 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
+@CrossOrigin(value = "*", maxAge = 3600)
 public class TestController {
 
     private static Logger log = LoggerFactory.getLogger(TestController.class);
-    private String testName;
-    private String username = "user1";
-    private int numberOfUsers = 10;
     private RunTestDTO runTestDTO = new RunTestDTO(20, 50, 0.9, 0.02, 0.44, 0.44, 0.05, 0.05, 0.9, 0.1, 0.1, 0.33, 0.33, 0.34, 0.9, 1);
     Map<String, Integer> numberOfRequests = new HashMap<>();
     Map<String, Long> databaseTime = new HashMap<>();
@@ -43,23 +42,21 @@ public class TestController {
     private TestRepository testRepository;
 
     @PostMapping("/runTest")
-    @CrossOrigin(value = "*", maxAge = 3600)
     public void asyncTest(@RequestBody String name) throws Exception {
 
         log.info("testAsync start");
-        testName = name;
-
-        if(testRepository.findAllByName(testName).length != 0){
+        log.info("Number of users " +  runTestDTO.getNumberOfUsers());
+        if(testRepository.findAllByName(name).length != 0){
             throw new Exception();
         }
 
         // RunTests
         List<ClientTestDTO> clientTestDTOList = new ArrayList<>();
         for(int i = 0; i < runTestDTO.getNumberOfUsers(); i++){
-            log.info("Register " + username + i);
-            asyncService.runTests(username + i, clientTestDTOList, runTestDTO);
+            log.info("Register " +  i);
+            asyncService.runTests(""+i, clientTestDTOList, runTestDTO);
         }
-        while(clientTestDTOList.size() < numberOfUsers);
+        while(clientTestDTOList.size() < runTestDTO.getNumberOfUsers());
         for(ClientTestDTO clientTestDTO: clientTestDTOList){
             for(Map.Entry<String, Integer> entry : clientTestDTO.getNumberOfRequests().entrySet()){
                 Integer number = numberOfRequests.get(entry.getKey());
@@ -83,14 +80,13 @@ public class TestController {
             long averageDBTime = databaseTime.get(entry.getKey()) / numberOR;
             long averageApiTime = apiTime.get(entry.getKey()) / numberOR;
             Endpoint endpoint = endpointRepository.findByEndpoint(entry.getKey()).get();
-            Test test = new Test(0, endpoint, testName, numberOR, numberOfUsers, averageDBTime, averageApiTime, averageAppTime);
+            Test test = new Test(0, endpoint, name, numberOR, (int) runTestDTO.getNumberOfUsers(), averageDBTime, averageApiTime, averageAppTime);
             testRepository.save(test);
         }
 
     }
 
     @GetMapping("/getTest")
-    @CrossOrigin(value = "*", maxAge = 3600)
     public ResponseEntity<?> getTest(){
         List<Test> tests = testRepository.findAll();
         for(int i = 0; i < tests.size(); i++){
@@ -101,14 +97,17 @@ public class TestController {
         return ResponseEntity.ok(temp);
     }
 
+    @PostMapping("/cleanDB")
+    public void cleanDB(){
+        testRepository.deleteAll();
+    }
+
     @PostMapping("/setConf")
-    @CrossOrigin(value = "*", maxAge = 3600)
     public void setConf(@RequestBody RunTestDTO runTestDTO){
         this.runTestDTO = runTestDTO;
     }
 
     @GetMapping("/getConf")
-    @CrossOrigin(value = "*", maxAge = 3600)
     public ResponseEntity<?> getConf(){
         Map<String, Object> temp = new HashMap<>();
         temp.put("conf", this.runTestDTO);
